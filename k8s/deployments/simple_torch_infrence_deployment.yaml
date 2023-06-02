@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple_torch_inference
+  labels:
+    app: simple_torch_inference
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: simple_torch_inference
+  template:
+    metadata:
+      labels:
+        app: simple_torch_inference
+    spec:
+      containers:
+      - name: simple_torch_inference
+        image: tripabhi/serveml:0.0.1
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: 200m
+            memory: 300Mi
+          limits:
+            memory: 400Mi

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: simple_torch_inference
+spec:
+  selector:
+    app: simple_torch_inference
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
