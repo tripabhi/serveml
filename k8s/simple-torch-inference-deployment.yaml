@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: simple_torch_inference
+  name: simple-torch-inference
   labels:
-    app: simple_torch_inference
+    app: simple-torch-inference
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: simple_torch_inference
+      app: simple-torch-inference
   template:
     metadata:
       labels:
-        app: simple_torch_inference
+        app: simple-torch-inference
     spec:
       containers:
-      - name: simple_torch_inference
+      - name: simple-torch-inference
         image: tripabhi/serveml:0.0.1
         ports:
         - containerPort: 80

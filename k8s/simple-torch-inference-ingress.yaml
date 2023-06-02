@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: foo
+spec:
+  rules:
+    - host: serveml.tripabhi.io
+      http:
+        paths:
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name:  simple-torch-inference
+                port:
+                  number: 80
