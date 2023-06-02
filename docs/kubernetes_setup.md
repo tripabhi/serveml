@@ -30,9 +30,21 @@ One of the nodes in the cluster will contain the control plane components like t
 ```
 Here, use the private IP of your machine as the `$PRIVATE_IP`
 
+## Add Pod Network Plugin
+We use Calico as the pod networking add-on. To install calico, run the following:
+``` bash
+./scripts/install_calico.sh
+```
+
 ## Join Cluster
 Run the following from the master node or control-plane node:
 ``` bash
 kubeadm token create --print-join-command
 ```
 Copy the output and run it from the worker nodes.
+
+## Verify the cluster
+Run the following to see if the nodes are ready in your cluster:
+``` bash
+kubectl get nodes
+```
