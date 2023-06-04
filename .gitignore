@@ -23,5 +23,6 @@ go.work
 **/venv
 **/__pycache__
 
+**/data
 
 .vscode
