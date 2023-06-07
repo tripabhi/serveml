@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: simple-torch-inference-bert
+  labels:
+    app: simple-torch-inference-bert
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: simple-torch-inference-bert
+  template:
+    metadata:
+      labels:
+        app: simple-torch-inference-bert
+    spec:
+      containers:
+      - name: simple-torch-inference-bert
+        image: tripabhi/simple-torch-inference-bert:0.0.1
+        ports:
+        - containerPort: 9081
+        resources:
+          requests:
+            cpu: 2000m
+            memory: 3000Mi
+          limits:
+            memory: 4000Mi

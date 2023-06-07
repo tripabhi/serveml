@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -75,7 +74,7 @@ func (info *BatcherInfo) Init() {
 func New(maxBatchSize int, maxLatency int, handler http.Handler) *BatchHandler {
 	batchHandler := BatchHandler{
 		next : handler,
-		channelIn: make(chan Input),
+		channelIn: make(chan Input, maxBatchSize),
 		MaxBatchSize: maxBatchSize,
 		MaxLatency: maxLatency,
 	}
@@ -86,9 +85,8 @@ func New(maxBatchSize int, maxLatency int, handler http.Handler) *BatchHandler {
 }
 
 func (handler *BatchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	var containsPredictPattern = regexp.MustCompile(`:predict$`)
+	var containsPredictPattern = regexp.MustCompile(`predict$`)
 	if !containsPredictPattern.MatchString(r.URL.Path) {
-		log.Printf("Regex failed for URL Path %s\n", r.URL.Path)
 		handler.next.ServeHTTP(w, r)
 		return
 	}
@@ -126,6 +124,7 @@ func (handler *BatchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(responseJson)
 
 	if err != nil {
@@ -135,6 +134,7 @@ func (handler *BatchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (handler *BatchHandler) predict() {
+	// log.Println("Running Batch Prediction")
 	batchReqJson, _ := json.Marshal(Request{
 		handler.batcherInfo.Queries,
 	})
@@ -144,6 +144,7 @@ func (handler *BatchHandler) predict() {
 	recorder := httptest.NewRecorder()
 
 	handler.next.ServeHTTP(recorder, req)
+	// log.Println("Received Response from Inference Server")
 
 	responseBody := recorder.Body.Bytes()
 
@@ -157,6 +158,7 @@ func (handler *BatchHandler) predict() {
 		}
 	} else {
 		err := json.Unmarshal(responseBody, &handler.batcherInfo.PredictionResponse)
+		// log.Println("Unmarshalled Response")
 		if err != nil {
 
 		} else {
@@ -168,6 +170,7 @@ func (handler *BatchHandler) predict() {
 					*v.ChannelOut <- res
 				}
 			} else {
+				// log.Printf("Length of contextMap %d\n", len(handler.batcherInfo.ContextMap))
 				for _, v := range handler.batcherInfo.ContextMap {
 					predictions := make([]interface{}, 0)
 					for _, i := range v.Index {
@@ -178,6 +181,7 @@ func (handler *BatchHandler) predict() {
 						Message:     "",
 						Prediction: predictions,
 					}
+					// log.Printf("Returning response %+v\n", res)
 					*v.ChannelOut <- res
 				}
 			}
@@ -190,7 +194,7 @@ func (handler *BatchHandler) predict() {
 func (handler *BatchHandler) workerLoop() {
 	for {
 		select {
-		case req := <- handler.channelIn:
+		case req := <-handler.channelIn:
 			if len(handler.batcherInfo.Queries) == 0 {
 				handler.batcherInfo.Start = time.Now().UTC()
 			}
@@ -214,9 +218,9 @@ func (handler *BatchHandler) workerLoop() {
 			(time.Now().UTC().Sub(handler.batcherInfo.Start).Milliseconds() >= int64(handler.MaxLatency) && len(handler.batcherInfo.Queries) > 0) {
 				handler.predict()
 		}
-
 	}
 }
+
 
 
 func (handler *BatchHandler) Consume() {
