@@ -15,6 +15,8 @@ output_map = {
 
 _data_path = app.pathutil.get_data_path()
 
+torch.set_num_threads(len(os.sched_getaffinity(0)))
+
 time_model_load_start = time.monotonic()
 modelname = os.path.join(_data_path, "model_sentiment.pt")
 tokenname = os.path.join(_data_path, "tokenizer_sentiment.pt")
