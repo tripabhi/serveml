@@ -5,47 +5,39 @@ import app.pathutil
 import time
 import typing
 
-output_map = {
-    1: "Negative",
-    2: "Neutral",
-    3: "Positive",
-    4: "Very Positive",
-    5: "Very Negative",
-}
 
-_data_path = app.pathutil.get_data_path()
+class InferenceService:
+    def __init__(self):
+        __data_path = app.pathutil.get_data_path()
+        __modelname = os.path.join(__data_path, "model_sentiment.pt")
+        __tokenname = os.path.join(__data_path, "tokenizer_sentiment.pt")
+        self.model = AutoModelForSequenceClassification.from_pretrained(__modelname)
+        self.tokenizer = AutoTokenizer.from_pretrained(__tokenname)
+        self.output_map = {
+            1: "Negative",
+            2: "Neutral",
+            3: "Positive",
+            4: "Very Positive",
+            5: "Very Negative",
+        }
 
-torch.set_num_threads(len(os.sched_getaffinity(0)))
+    def convert_to_ms(self, num):
+        return int(round(num * 1000))
 
-time_model_load_start = time.monotonic()
-modelname = os.path.join(_data_path, "model_sentiment.pt")
-tokenname = os.path.join(_data_path, "tokenizer_sentiment.pt")
-time_model_load_end = time.monotonic()
+    def infer(self, data_list: typing.List[str]):
+        t_start = time.monotonic()
+        tokens = self.tokenizer.batch_encode_plus(
+            data_list, padding=True, truncation=True, return_tensors="pt"
+        )
+        t_token = time.monotonic()
 
-model = AutoModelForSequenceClassification.from_pretrained(modelname)
-tokenizer = AutoTokenizer.from_pretrained(tokenname)
+        results = self.model(**tokens)
+        t_inference = time.monotonic()
+        value = {}
+        value["InferenceTime"] = self.convert_to_ms(t_inference - t_token)
+        value["TotalTime"] = self.convert_to_ms(t_inference - t_start)
 
-
-def convert_to_ms(num):
-    return int(round(num * 1000))
-
-
-def infer(data_list: typing.List[str]):
-    t_start = time.monotonic()
-    tokens = tokenizer.batch_encode_plus(
-        data_list, padding=True, truncation=True, return_tensors="pt"
-    )
-    t_token = time.monotonic()
-
-    results = model(**tokens)
-    t_inference = time.monotonic()
-    value = {}
-    value["TokenTime"] = convert_to_ms(t_token - t_start)
-    value["InferenceTime"] = convert_to_ms(t_inference - t_token)
-    value["TotalTime"] = convert_to_ms(t_inference - t_start)
-    value["ModelLoadTime"] = convert_to_ms(time_model_load_end - time_model_load_start)
-
-    predictions = torch.argmax(results.logits, dim=1) + 1
-    sentiment_labels = [output_map[p.item()] for p in predictions]
-    value["predictions"] = sentiment_labels
-    return value
+        predictions = torch.argmax(results.logits, dim=1) + 1
+        sentiment_labels = [self.output_map[p.item()] for p in predictions]
+        value["predictions"] = sentiment_labels
+        return value

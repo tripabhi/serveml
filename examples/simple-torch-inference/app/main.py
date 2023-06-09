@@ -1,19 +1,14 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-import typing
 
-from app.service.inferenceservice import infer
+from app.service.inferenceservice import InferenceService
 
 
 class PredictionRequestBody(BaseModel):
     queries: list[str]
 
 
-# class PredictionResponseBody(BaseModel):
-#     metrics: typing.Dict[any, any]
-#     predictions: list[str]
-
-
+svc = InferenceService()
 app = FastAPI()
 
 
@@ -25,7 +20,7 @@ def read_root():
 @app.post("/predict")
 def run_predict(req: PredictionRequestBody):
     if len(req.queries) > 0:
-        result = infer(req.queries)
+        result = svc.infer(req.queries)
         return {
             "metrics": {
                 "TokenTime": result["TokenTime"],
@@ -40,7 +35,7 @@ def run_predict(req: PredictionRequestBody):
 @app.post("/predictNoBatcher")
 def run_predict(req: PredictionRequestBody):
     if len(req.queries) > 0:
-        result = infer(req.queries)
+        result = svc.infer(req.queries)
         return {
             "metrics": {
                 "TokenTime": result["TokenTime"],
@@ -50,5 +45,3 @@ def run_predict(req: PredictionRequestBody):
             },
             "predictions": result["predictions"],
         }
-        # predictions = infer(req.queries)
-        # return {"predictions": predictions}
