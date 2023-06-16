@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: simple-torch-inference-bert
-        image: tripabhi/simple-torch-inference-bert:0.0.1
+        image: tripabhi/simple-torch-inference-bert:0.0.7-flask-wsgi
         ports:
         - containerPort: 9081
         resources:
