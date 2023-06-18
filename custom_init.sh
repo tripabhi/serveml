@@ -1,5 +1,5 @@
 #!/bin/bash
 
-./agent --max-batchsize=128 --max-latency=100 --service-port=80 &
+./agent --max-batchsize=128 --max-latency=100 --service-port=3000 &
 
-uvicorn app.main:app --host 0.0.0.0 --port 80
+python app/main.py

@@ -1,14 +1,14 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import os
-import app.pathutil
+import pathutil
 import time
 import typing
 
 
 class InferenceService:
     def __init__(self):
-        __data_path = app.pathutil.get_data_path()
+        __data_path = pathutil.get_data_path()
         __modelname = os.path.join(__data_path, "model_sentiment.pt")
         __tokenname = os.path.join(__data_path, "tokenizer_sentiment.pt")
         self.model = AutoModelForSequenceClassification.from_pretrained(__modelname)

@@ -12,7 +12,7 @@ RUN go build -o agent
 FROM python:3.9
 
 EXPOSE 9081
-EXPOSE 80
+EXPOSE 3000
 
 WORKDIR /user-app
 

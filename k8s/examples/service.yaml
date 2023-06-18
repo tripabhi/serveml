@@ -3,7 +3,6 @@ kind: Service
 metadata:
   name: simple-torch-inference-bert
 spec:
-  type: LoadBalancer
   selector:
     app: simple-torch-inference-bert
   ports:

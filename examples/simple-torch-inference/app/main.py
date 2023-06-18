@@ -1,47 +1,51 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+from flask import Flask, request
+from gevent.pywsgi import WSGIServer
 
-from app.service.inferenceservice import InferenceService
+from service.inferenceservice import InferenceService
 
-
-class PredictionRequestBody(BaseModel):
-    queries: list[str]
-
-
+app = Flask(__name__)
 svc = InferenceService()
-app = FastAPI()
 
 
-@app.get("/")
+@app.route("/")
 def read_root():
     return {"Hello": "World"}
 
 
-@app.post("/predict")
-def run_predict(req: PredictionRequestBody):
-    if len(req.queries) > 0:
-        result = svc.infer(req.queries)
+@app.route("/predict", methods=["POST"])
+def run_predict():
+    data = request.json
+    if len(data["queries"]) > 0:
+        result = svc.infer(data["queries"])
         return {
             "metrics": {
-                "TokenTime": result["TokenTime"],
                 "InferenceTime": result["InferenceTime"],
                 "TotalTime": result["TotalTime"],
-                "ModelLoadTime": result["ModelLoadTime"],
             },
             "predictions": result["predictions"],
         }
 
 
-@app.post("/predictNoBatcher")
-def run_predict(req: PredictionRequestBody):
-    if len(req.queries) > 0:
-        result = svc.infer(req.queries)
+@app.route("/predict_no_batch", methods=["POST"])
+def run_predict_no_batch():
+    data = request.json
+    if len(data["queries"]) > 0:
+        result = svc.infer(data["queries"])
         return {
             "metrics": {
-                "TokenTime": result["TokenTime"],
                 "InferenceTime": result["InferenceTime"],
                 "TotalTime": result["TotalTime"],
-                "ModelLoadTime": result["ModelLoadTime"],
             },
             "predictions": result["predictions"],
         }
+
+
+if __name__ == "__main__":
+    try:
+        server = WSGIServer(("0.0.0.0", 3000), app)
+        print("Starting Inference Function Server on 0.0.0.0:3000")
+        server.serve_forever()
+    except Exception as e:
+        print("Exception occured : ", e)
+    finally:
+        server.stop()

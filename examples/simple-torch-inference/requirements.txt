@@ -1,5 +1,4 @@
-fastapi
-uvicorn
-pydantic
-torch
 transformers
+torch
+flask
+gevent

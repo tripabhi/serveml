@@ -1,7 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sml
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: simple-torch-inference-bert
+  namespace: sml
   labels:
     app: simple-torch-inference-bert
 spec:
@@ -16,7 +22,7 @@ spec:
     spec:
       containers:
       - name: simple-torch-inference-bert
-        image: tripabhi/simple-torch-inference-bert:0.0.7-flask-wsgi
+        image: tripabhi/simple-torch-inference-bert:1.0.0-wsgi
         ports:
         - containerPort: 9081
         resources:
@@ -25,3 +31,16 @@ spec:
             memory: 3000Mi
           limits:
             memory: 4000Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: simple-torch-inference-bert
+  namespace: sml
+spec:
+  selector:
+    app: simple-torch-inference-bert
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9081

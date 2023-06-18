@@ -25,12 +25,12 @@ import (
 )
 
 var (
-	port = flag.String("port", "9081", "Worker Agent's port")
-	svcPort = flag.String("service-port", "8000", "Port of Service you want to forward requests to")
+	port           = flag.String("port", "9081", "Worker Agent's port")
+	svcPort        = flag.String("service-port", "3000", "Port of Service you want to forward requests to")
 	enableBatching = flag.Bool("enable-batching", true, "Enable request batcher")
-	maxBatchSize  = flag.String("max-batchsize", "32", "Max Batch Size")
-	maxLatency    = flag.String("max-latency", "2000", "Max Latency in milliseconds")
-	idleTimeout = flag.String("idle-timeout", "30000", "Idle timeout for each request")
+	maxBatchSize   = flag.String("max-batchsize", "32", "Max Batch Size")
+	maxLatency     = flag.String("max-latency", "2000", "Max Latency in milliseconds")
+	idleTimeout    = flag.String("idle-timeout", "30000", "Idle timeout for each request")
 )
 
 func main() {
@@ -44,10 +44,10 @@ func main() {
 
 	var ctx context.Context = signals.NewContext()
 
-	mainServer := buildServer(ctx, *port , *svcPort, batcherConfig)
+	mainServer := buildServer(ctx, *port, *svcPort, batcherConfig)
 
 	servers := map[string]*http.Server{
-		"main" : mainServer,
+		"main": mainServer,
 	}
 
 	errCh := make(chan error)
@@ -69,7 +69,7 @@ func main() {
 
 	select {
 	case err := <-errCh:
-		log.Println("Failed to bring up agent, shutting down: "+err.Error())
+		log.Println("Failed to bring up agent, shutting down: " + err.Error())
 		os.Exit(1)
 	case <-ctx.Done():
 		log.Println("Received TERM, attempting to gracefully shutdown servers")
@@ -103,23 +103,23 @@ func getBatcherConfig() *safebatcher.Config {
 	}
 
 	return &safebatcher.Config{
-		MaxLatency: time.Duration(maxLatencyInt) * time.Millisecond,
+		MaxLatency:   time.Duration(maxLatencyInt) * time.Millisecond,
 		MaxBatchSize: maxBatchSizeInt,
-		IdleTimeout: time.Duration(idleTimeoutInt) * time.Millisecond,
+		IdleTimeout:  time.Duration(idleTimeoutInt) * time.Millisecond,
 	}
 }
 
-func buildServer(ctx context.Context, port string, svcPort string, batcherConfig *safebatcher.Config) *http.Server { 
+func buildServer(ctx context.Context, port string, svcPort string, batcherConfig *safebatcher.Config) *http.Server {
 	target := &url.URL{
 		Scheme: "http",
-		Host: net.JoinHostPort("127.0.0.1", svcPort),
+		Host:   net.JoinHostPort("127.0.0.1", svcPort),
 	}
 
 	maxIdleConns := 1000
 
 	httpProxy := httputil.NewSingleHostReverseProxy(target)
-	httpProxy.Transport = pkgnet.NewAutoTransport(maxIdleConns /* max-idle conns */, 
-		maxIdleConns /* max-idle conns per host*/ )
+	httpProxy.Transport = pkgnet.NewAutoTransport(maxIdleConns, /* max-idle conns */
+		maxIdleConns /* max-idle conns per host*/)
 	httpProxy.BufferPool = proxy.NewBufferPool()
 	httpProxy.FlushInterval = proxy.FlushInterval
 

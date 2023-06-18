@@ -18,33 +18,33 @@ type Request struct {
 }
 
 type Response struct {
-	Message    string      `json:"message"`
-	Metrics interface{} `json:"metrics"`
+	Message     string        `json:"message"`
+	Metrics     interface{}   `json:"metrics"`
 	Predictions []interface{} `json:"predictions"`
 }
 
 type PredictionResponse struct {
-	Metrics interface{} `json:"metrics"`
+	Metrics     interface{}   `json:"metrics"`
 	Predictions []interface{} `json:"predictions"`
 }
 
 type Batch struct {
 	Queries     []interface{}
-	Path 		string
+	Path        string
 	subscribers []BatchSubscriber
 	timer       *time.Timer
 }
 
 type BatchSubscriber struct {
 	rangeStart int
-	rangeEnd int
-	respCh  chan *Response
+	rangeEnd   int
+	respCh     chan *Response
 }
 
 type Config struct {
 	MaxBatchSize int
 	MaxLatency   time.Duration
-	IdleTimeout time.Duration
+	IdleTimeout  time.Duration
 }
 
 type PredictionRequestBatcher struct {
@@ -52,15 +52,15 @@ type PredictionRequestBatcher struct {
 	next         http.Handler
 	MaxBatchSize int
 	MaxLatency   time.Duration
-	IdleTimeout time.Duration
+	IdleTimeout  time.Duration
 	running      bool
 	parentCtx    context.Context
-	currBatch *Batch
+	currBatch    *Batch
 }
 
 func NewPredictionRequestBatcher(
-	ctx context.Context, 
-	config *Config, 
+	ctx context.Context,
+	config *Config,
 	next http.Handler,
 ) *PredictionRequestBatcher {
 
@@ -69,12 +69,12 @@ func NewPredictionRequestBatcher(
 	}
 
 	batcher := &PredictionRequestBatcher{
-		next : next,
+		next:         next,
 		MaxBatchSize: config.MaxBatchSize,
-		MaxLatency: config.MaxLatency,
-		IdleTimeout: config.IdleTimeout,
-		running: true,
-		parentCtx: ctx,
+		MaxLatency:   config.MaxLatency,
+		IdleTimeout:  config.IdleTimeout,
+		running:      true,
+		parentCtx:    ctx,
 	}
 
 	go func(b *PredictionRequestBatcher) {
@@ -107,11 +107,11 @@ func (b *PredictionRequestBatcher) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var req	Request
+	var req Request
 	var err error
 
 	body, err := io.ReadAll(r.Body)
-	
+
 	if err != nil {
 		http.Error(w, "Cannot read Request Body", http.StatusBadRequest)
 		return
@@ -129,7 +129,7 @@ func (b *PredictionRequestBatcher) ServeHTTP(w http.ResponseWriter, r *http.Requ
 
 	select {
 	case resp := <-respCh:
-		responseJson , err := json.Marshal(resp)
+		responseJson, err := json.Marshal(resp)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -152,7 +152,7 @@ func (b *PredictionRequestBatcher) submitQueries(
 	request *Request,
 	path string,
 ) (<-chan *Response, error) {
-	
+
 	respCh := make(chan *Response, 1)
 
 	sub := BatchSubscriber{
@@ -185,9 +185,9 @@ func (b *PredictionRequestBatcher) submitQueries(
 	}
 
 	b.currBatch = &Batch{
-		Queries: make([]interface{}, 0),
+		Queries:     make([]interface{}, 0),
 		subscribers: make([]BatchSubscriber, 0),
-		Path: path,
+		Path:        path,
 	}
 	sub.rangeStart = 0
 	sub.rangeEnd = len(request.Queries)
@@ -224,7 +224,6 @@ func (b *PredictionRequestBatcher) forwardCurrentBatchWithMutex() {
 	}
 }
 
-
 func (batcher *PredictionRequestBatcher) forward(batch *Batch) {
 
 	batchReqJson, _ := json.Marshal(Request{
@@ -233,6 +232,8 @@ func (batcher *PredictionRequestBatcher) forward(batch *Batch) {
 
 	reader := bytes.NewReader(batchReqJson)
 	req := httptest.NewRequest(http.MethodPost, batch.Path, reader)
+	req.Header.Set("Content-Type", "application/json")
+
 	recorder := httptest.NewRecorder()
 
 	batcher.next.ServeHTTP(recorder, req)
@@ -240,9 +241,9 @@ func (batcher *PredictionRequestBatcher) forward(batch *Batch) {
 	responseBody := recorder.Body.Bytes()
 
 	if recorder.Code != http.StatusOK {
-		for i:= len(batch.subscribers) - 1; i >= 0; i-- {
+		for i := len(batch.subscribers) - 1; i >= 0; i-- {
 			batch.subscribers[i].respCh <- &Response{
-				Message: "inference service replied with non-200 status code",
+				Message:     "inference service replied with non-200 status code",
 				Predictions: nil,
 			}
 			close(batch.subscribers[i].respCh)
@@ -254,9 +255,9 @@ func (batcher *PredictionRequestBatcher) forward(batch *Batch) {
 	err := json.Unmarshal(responseBody, &resp)
 
 	if err != nil {
-		for i:= len(batch.subscribers) - 1; i >= 0; i-- {
+		for i := len(batch.subscribers) - 1; i >= 0; i-- {
 			batch.subscribers[i].respCh <- &Response{
-				Message: "unable to unmarshall response",
+				Message:     "unable to unmarshall response",
 				Predictions: nil,
 			}
 			close(batch.subscribers[i].respCh)
@@ -264,27 +265,26 @@ func (batcher *PredictionRequestBatcher) forward(batch *Batch) {
 		return
 	} else {
 		if len(resp.Predictions) != len(batch.Queries) {
-			for i:= len(batch.subscribers) - 1; i >= 0; i-- {
+			for i := len(batch.subscribers) - 1; i >= 0; i-- {
 				batch.subscribers[i].respCh <- &Response{
-					Message: "Length of response from inference service does not match queries",
+					Message:     "Length of response from inference service does not match queries",
 					Predictions: nil,
 				}
 				close(batch.subscribers[i].respCh)
 			}
 			return
 		} else {
-			for i:= len(batch.subscribers) - 1; i >= 0; i-- {
+			for i := len(batch.subscribers) - 1; i >= 0; i-- {
 				start := batch.subscribers[i].rangeStart
 				end := batch.subscribers[i].rangeEnd
 
 				batch.subscribers[i].respCh <- &Response{
-					Message: "Successful",
+					Message:     "Successful",
 					Predictions: resp.Predictions[start:end],
-					Metrics: resp.Metrics,
+					Metrics:     resp.Metrics,
 				}
 				close(batch.subscribers[i].respCh)
 			}
 		}
 	}
 }
-
