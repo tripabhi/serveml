@@ -191,6 +191,7 @@ func (b *PredictionRequestBatcher) submitQueries(
 	}
 	sub.rangeStart = 0
 	sub.rangeEnd = len(request.Queries)
+	
 	b.currBatch.Queries = append(b.currBatch.Queries, request.Queries...)
 	b.currBatch.subscribers = append(b.currBatch.subscribers, sub)
 
