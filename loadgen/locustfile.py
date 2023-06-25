@@ -1,7 +1,9 @@
-from locust import FastHttpUser, task
+from locust import FastHttpUser, task, between
 
 
 class InferenceTestUser(FastHttpUser):
+    wait_time = between(1, 2)
+
     @task
     def predict(self):
         self.client.post(
