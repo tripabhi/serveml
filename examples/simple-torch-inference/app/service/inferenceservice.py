@@ -12,6 +12,7 @@ class InferenceService:
         __modelname = os.path.join(__data_path, "model_sentiment.pt")
         __tokenname = os.path.join(__data_path, "tokenizer_sentiment.pt")
         self.model = AutoModelForSequenceClassification.from_pretrained(__modelname)
+        self.model.eval()
         self.tokenizer = AutoTokenizer.from_pretrained(__tokenname)
         self.output_map = {
             1: "Negative",
