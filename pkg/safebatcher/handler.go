@@ -162,43 +162,29 @@ func (b *PredictionRequestBatcher) submitQueries(
 	b.Lock()
 	defer b.Unlock()
 
-	if b.currBatch != nil {
-		if len(b.currBatch.Queries) < b.MaxBatchSize {
-
-			sub.rangeStart = len(b.currBatch.Queries)
-			sub.rangeEnd = sub.rangeStart + len(request.Queries)
-
-			b.currBatch.Queries = append(b.currBatch.Queries, request.Queries...)
-			b.currBatch.subscribers = append(b.currBatch.subscribers, sub)
-
-			if len(b.currBatch.Queries) >= b.MaxBatchSize {
-				b.currBatch.timer.Stop()
-				b.forwardCurrentBatch()
-
-			}
-
-			return respCh, nil
+	if b.currBatch == nil {
+		b.currBatch = &Batch{
+			Queries:     make([]interface{}, 0),
+			subscribers: make([]BatchSubscriber, 0),
+			Path:        path,
 		}
 
-		b.currBatch.timer.Stop()
-		b.forwardCurrentBatch()
+		b.currBatch.timer = time.AfterFunc(b.MaxLatency, b.forwardCurrentBatchWithMutex)
 	}
 
-	b.currBatch = &Batch{
-		Queries:     make([]interface{}, 0),
-		subscribers: make([]BatchSubscriber, 0),
-		Path:        path,
-	}
-	sub.rangeStart = 0
-	sub.rangeEnd = len(request.Queries)
-	
+	sub.rangeStart = len(b.currBatch.Queries)
+	sub.rangeEnd = sub.rangeStart + len(request.Queries)
+
 	b.currBatch.Queries = append(b.currBatch.Queries, request.Queries...)
 	b.currBatch.subscribers = append(b.currBatch.subscribers, sub)
 
-	b.currBatch.timer = time.AfterFunc(b.MaxLatency, b.forwardCurrentBatchWithMutex)
+	if len(b.currBatch.Queries) >= b.MaxBatchSize {
+		b.currBatch.timer.Stop()
+		b.forwardCurrentBatch()
+
+	}
 
 	return respCh, nil
-
 }
 
 func (b *PredictionRequestBatcher) forwardCurrentBatch() {
